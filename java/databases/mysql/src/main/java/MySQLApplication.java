@@ -16,8 +16,8 @@ public class MySQLApplication {
     public static void main(String[] args) {
         MySQLUtils mySQLUtils = new MySQLUtils();
         try {
-            log.info(mySQLUtils.getSchemaByDatabaseAndTable("test", "services"));
-        } catch (SQLException | IOException | PropertyVetoException | JSONException e) {
+            log.info(mySQLUtils.getTablesForDatabaseWithPattern("paisabazaar_crm", "generic"));
+        } catch (SQLException | IOException | PropertyVetoException e) {
             e.printStackTrace();
         }
     }

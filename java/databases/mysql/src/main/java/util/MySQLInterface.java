@@ -32,6 +32,8 @@ public interface MySQLInterface {
      */
     List<String> getTablesForDatabase(String catalog) throws SQLException, IOException, PropertyVetoException;
 
+    List<String> getTablesForDatabaseWithPattern(String catalog, String pattern) throws SQLException, IOException, PropertyVetoException;
+
     /**
      * Returns list of schemas in the form of json objects.
      * @return List<List<JSONObject>>

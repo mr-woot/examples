@@ -72,7 +72,25 @@ public class MySQLUtils implements MySQLInterface {
     }
 
     @Override
-    public List<String> getTablesForDatabase(String database)  throws SQLException, IOException, PropertyVetoException {
+    public List<String> getTablesForDatabaseWithPattern(String database, String pattern) throws SQLException, IOException, PropertyVetoException {
+        Connection connection;
+        ResultSet resultSet;
+        List<String> tablesList = new ArrayList<>();
+        connection = DataSource.getInstance().getConnection();
+//        connection.setCatalog(database);
+        DatabaseMetaData md = connection.getMetaData();
+        log.debug("Fetching tables for database - '" + database + "'");
+        resultSet = md.getTables(database, "%", pattern + "%", new String[]{"TABLE", "VIEW"});
+        while (resultSet.next()) {
+            tablesList.add(resultSet.getString(3));
+        }
+        connection.close();
+        resultSet.close();
+        return tablesList;
+    }
+
+    @Override
+    public List<String> getTablesForDatabase(String database) throws SQLException, IOException, PropertyVetoException {
         Connection connection;
         ResultSet resultSet;
         List<String> tablesList = new ArrayList<>();
