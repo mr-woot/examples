@@ -1,8 +1,10 @@
 package com.paisabazaar.kafka_admin_api.repository;
 
+import com.paisabazaar.kafka_admin_api.exception.CustomException;
 import com.paisabazaar.kafka_admin_api.service.KafkaService;
 import org.apache.kafka.clients.admin.ConsumerGroupDescription;
 import org.apache.kafka.clients.admin.TopicDescription;
+import org.apache.kafka.common.KafkaException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -41,11 +43,15 @@ public class KafkaRepository {
         return kafkaService.getConsumerGroups();
     }
 
-    public void createTopic(String topicName, int numOfPartitions, int replicationFactor) throws ExecutionException, InterruptedException {
-        kafkaService.createTopic(topicName, numOfPartitions, replicationFactor);
+    public void createTopics(List<String> topics, int numOfPartitions, int replicationFactor) throws ExecutionException, InterruptedException, CustomException {
+        kafkaService.createTopics(topics, numOfPartitions, replicationFactor);
     }
 
-    public void deleteTopic(String topicName) throws ExecutionException, InterruptedException {
-        kafkaService.deleteTopic(topicName);
+    public void deleteTopics(List<String> topics) throws ExecutionException, InterruptedException, CustomException {
+        kafkaService.deleteTopics(topics);
+    }
+
+    public void createPartitions(String topicName, int partitions) throws ExecutionException, InterruptedException {
+        kafkaService.createPartitions(topicName, partitions);
     }
 }

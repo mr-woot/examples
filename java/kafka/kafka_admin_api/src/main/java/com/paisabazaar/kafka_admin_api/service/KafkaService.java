@@ -1,6 +1,12 @@
 package com.paisabazaar.kafka_admin_api.service;
 
+import com.paisabazaar.kafka_admin_api.exception.CustomException;
+import lombok.extern.log4j.Log4j;
 import org.apache.kafka.clients.admin.*;
+import org.apache.kafka.common.KafkaException;
+import org.apache.kafka.common.KafkaFuture;
+import org.apache.kafka.common.config.Config;
+import org.apache.kafka.common.config.ConfigResource;
 import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +19,7 @@ import java.util.stream.Collectors;
  * On: 18/7/19 | 1:07 PM
  */
 @Service
+@Log4j
 public class KafkaService {
     private final KafkaAdmin kafkaAdmin;
     private AdminClient adminClient;
@@ -52,24 +59,67 @@ public class KafkaService {
                 stream().map(ConsumerGroupListing::groupId).collect(Collectors.toList());
     }
 
-    public void createTopic(String topicName, int numOfPartitions, int replicationFactor) throws ExecutionException, InterruptedException {
-        NewTopic newTopic = new NewTopic(topicName, numOfPartitions, (short) replicationFactor); //new NewTopic(topicName, numPartitions, replicationFactor)
-
+    public void createTopics(List<String> topics, int numOfPartitions, int replicationFactor) throws ExecutionException, InterruptedException, KafkaException, CustomException {
         List<NewTopic> newTopics = new ArrayList<>();
-        newTopics.add(newTopic);
+        for (String topic : topics) {
+            NewTopic newTopic = new NewTopic(topic, numOfPartitions, (short) replicationFactor);
+            newTopics.add(newTopic);
+        }
+        CreateTopicsResult createTopicsResult = adminClient.createTopics(newTopics);
+        Map<String, KafkaFuture<Void>> futures = createTopicsResult.values();
 
-        adminClient.createTopics(newTopics).all().get();
+        List<String> failures = new ArrayList<>();
+
+        for (KafkaFuture<Void> value : futures.values()) {
+            try {
+                value.get();
+            } catch (Exception e) {
+                log.error("CreateTopicsResult#all: internal error | " + e.getMessage());
+                failures.add(e.getCause().getMessage());
+            }
+        }
         adminClient.close();
+        this.initAdminClient(kafkaAdmin);
 
+        if (failures.size() > 0) {
+            throw new CustomException(String.join(", ", failures));
+        }
+    }
+
+    public void deleteTopics(List<String> topics) throws ExecutionException, InterruptedException, CustomException {
+        DeleteTopicsResult deleteTopicsResult = adminClient.deleteTopics(topics);
+
+        Map<String, KafkaFuture<Void>> futures = deleteTopicsResult.values();
+
+        List<String> failures = new ArrayList<>();
+
+        for (KafkaFuture<Void> value : futures.values()) {
+            try {
+                value.get();
+            } catch (Exception e) {
+                log.error("DeleteTopicsResult#all: internal error | " + e.getMessage());
+                failures.add(e.getCause().getMessage());
+            }
+        }
+        adminClient.close();
+        this.initAdminClient(kafkaAdmin);
+
+        if (failures.size() > 0) {
+            throw new CustomException(String.join(", ", failures));
+        }
+    }
+
+    public void createPartitions(String topicName, int partitions) throws ExecutionException, InterruptedException {
+        NewPartitions newPartitionRequest = NewPartitions.increaseTo(partitions);
+        adminClient.createPartitions(Collections.singletonMap(topicName, newPartitionRequest)).all().get();
+        adminClient.close();
         this.initAdminClient(kafkaAdmin);
     }
 
-    public void deleteTopic(String topicName) throws ExecutionException, InterruptedException {
-        Collection<String> topics = new ArrayList<>();
-        topics.add(topicName);
-        adminClient.deleteTopics(topics).all().get();
+    public void createRetention(String topicName, int retention) throws ExecutionException, InterruptedException {
+//        NewPartitions newPartitionRequest = NewPartitions.increaseTo(partitions);
+        Map<ConfigResource, Config> config;
         adminClient.close();
-
         this.initAdminClient(kafkaAdmin);
     }
 }

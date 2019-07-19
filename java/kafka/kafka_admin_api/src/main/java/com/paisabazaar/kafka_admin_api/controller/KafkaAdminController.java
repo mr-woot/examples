@@ -1,7 +1,10 @@
 package com.paisabazaar.kafka_admin_api.controller;
 
 import com.google.gson.Gson;
+import com.paisabazaar.kafka_admin_api.exception.CustomException;
 import com.paisabazaar.kafka_admin_api.model.TopicConfig;
+import com.paisabazaar.kafka_admin_api.payload.ErrorResponse;
+import com.paisabazaar.kafka_admin_api.payload.TopicPartitionRequest;
 import com.paisabazaar.kafka_admin_api.payload.TopicRequest;
 import com.paisabazaar.kafka_admin_api.repository.KafkaRepository;
 import lombok.extern.log4j.Log4j;
@@ -10,7 +13,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.Map;
 
 /**
  * Contributed By: Tushar Mudgal
@@ -37,7 +42,7 @@ public class KafkaAdminController {
         try {
             result = new Gson().toJson(kafkaRepository.describeTopics());
         } catch (ExecutionException | InterruptedException e) {
-            e.printStackTrace();
+            return new ResponseEntity<>(new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getCause().getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
@@ -48,7 +53,7 @@ public class KafkaAdminController {
         try {
             result = new Gson().toJson(kafkaRepository.describeConsumerGroups());
         } catch (ExecutionException | InterruptedException e) {
-            e.printStackTrace();
+            return new ResponseEntity<>(new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getCause().getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
@@ -59,7 +64,7 @@ public class KafkaAdminController {
         try {
             result = new Gson().toJson(kafkaRepository.getTopicNames());
         } catch (ExecutionException | InterruptedException e) {
-            e.printStackTrace();
+            return new ResponseEntity<>(new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getCause().getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
@@ -70,29 +75,47 @@ public class KafkaAdminController {
         try {
             result = new Gson().toJson(kafkaRepository.getConsumerGroups());
         } catch (ExecutionException | InterruptedException e) {
-            e.printStackTrace();
+            return new ResponseEntity<>(new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getCause().getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
-    @PostMapping(value = "/create-topic", produces = "application/json")
-    public ResponseEntity<?> createTopic(@RequestBody TopicRequest topicRequest) {
+    @PostMapping(value = "/create-topics", produces = "application/json")
+    public ResponseEntity<?> createTopics(@RequestBody TopicRequest topicRequest) {
         try {
-            kafkaRepository.createTopic(topicRequest.getTopicName(), topicConfig.getNumOfPartitions(), topicConfig.getReplicationFactor());
+            kafkaRepository.createTopics(topicRequest.getTopics(), topicConfig.getNumOfPartitions(), topicConfig.getReplicationFactor());
         } catch (ExecutionException | InterruptedException e) {
-            e.printStackTrace();
+            return new ResponseEntity<>(new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getCause().getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (CustomException e) {
+            return new ResponseEntity<>(new ErrorResponse(HttpStatus.CONFLICT.value(), e.getMessage()), HttpStatus.CONFLICT);
         }
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
 
-    @PostMapping(value = "/delete-topic", produces = "application/json")
-    public ResponseEntity<?> deleteTopic(@RequestBody TopicRequest topicRequest) {
+    @PostMapping(value = "/delete-topics", produces = "application/json")
+    public ResponseEntity<?> deleteTopics(@RequestBody TopicRequest topicRequest) {
         try {
-            kafkaRepository.deleteTopic(topicRequest.getTopicName());
+            kafkaRepository.deleteTopics(topicRequest.getTopics());
         } catch (ExecutionException | InterruptedException e) {
-            e.printStackTrace();
+            return new ResponseEntity<>(new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getCause().getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (CustomException e) {
+            return new ResponseEntity<>(new ErrorResponse(HttpStatus.CONFLICT.value(), e.getMessage()), HttpStatus.CONFLICT);
         }
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
+
+    @PostMapping(value = "/create-partitions", produces = "application/json")
+    public ResponseEntity<?> createPartitions(@RequestBody HashMap<String, Integer> topicPartitionRequest) {
+        try {
+            for (Map.Entry<String, Integer> entry : topicPartitionRequest.entrySet()) {
+                System.out.println(entry.getKey() + entry.getValue());
+                kafkaRepository.createPartitions(entry.getKey(), entry.getValue());
+            }
+        } catch (ExecutionException | InterruptedException e) {
+            return new ResponseEntity<>(new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getCause().getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>(HttpStatus.CREATED);
+    }
+
 
 }
